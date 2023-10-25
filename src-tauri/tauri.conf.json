@@ -29,7 +29,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.labpro.front",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -58,10 +58,19 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "LabPro",
+        "title": "Labpro client version",
         "width": 1024,
         "minHeight": 600,
         "minWidth": 800,
+        "center": true,
+        "visible": false
+      },
+      {
+        "width": 500,
+        "height": 300,
+        "decorations": false,
+        "url": "love.html",
+        "label": "splashscreen",
         "center": true
       }
     ]
