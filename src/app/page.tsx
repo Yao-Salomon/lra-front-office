@@ -104,6 +104,7 @@ export default function Home() {
                         console.log("valeur du mot de passe",passwordValue);
                         await logIn(emailValue,passwordValue)
                         .then(async res=>{
+                          console.log("Valeur des ressources humaines",res)
                           //System notification management
                           let permissionGranted = await isPermissionGranted();
                           if (!permissionGranted) {
@@ -135,7 +136,7 @@ export default function Home() {
 
                         })
                         .finally(()=>{
-                          
+                          setButtonLoading(false); 
                         });
                     }}
                   >
