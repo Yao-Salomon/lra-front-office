@@ -1,8 +1,8 @@
 "use client";
-import { BellIcon, ChatBubbleLeftIcon, CircleStackIcon, CloudIcon, DocumentIcon, DocumentPlusIcon, EnvelopeIcon, FireIcon, HashtagIcon, MagnifyingGlassIcon, MegaphoneIcon, MusicalNoteIcon, PlusCircleIcon, PlusIcon, ReceiptRefundIcon, ShoppingCartIcon, SignalIcon, TagIcon, TicketIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
-import {BellAlertIcon, BellSlashIcon, CheckCircleIcon, CogIcon, EnvelopeOpenIcon, ServerStackIcon, SwatchIcon} from "@heroicons/react/24/solid"
-import { Button, Tabs,Tab,Card, CardBody, CardHeader, Input, Select, SelectItem, Textarea, SelectSection, Chip, Tooltip, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Badge, Image } from "@nextui-org/react";
-import { createCommands, createMailList, loadCommandDetails, loadCommands, loadEssais, loadMateriaux, loadNotifications, loadSettings, updateNotification } from "../_components/services";
+import { BellIcon, ChatBubbleLeftIcon, CircleStackIcon, CloudIcon, DocumentIcon, DocumentPlusIcon, EnvelopeIcon, ExclamationTriangleIcon, FireIcon, HashtagIcon, MagnifyingGlassIcon, MegaphoneIcon, MusicalNoteIcon, PencilSquareIcon, PlusCircleIcon, PlusIcon, ReceiptRefundIcon, ShieldCheckIcon, ShoppingCartIcon, SignalIcon, TagIcon, TicketIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
+import {BellAlertIcon, BellSlashIcon, CheckBadgeIcon, CheckCircleIcon, CogIcon, EnvelopeOpenIcon, ServerStackIcon, SwatchIcon} from "@heroicons/react/24/solid"
+import { Button, Tabs,Tab,Card, CardBody, CardHeader, Input, Select, SelectItem, Textarea, SelectSection, Chip, Tooltip, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Badge, Image, Spinner, Listbox, ListboxItem } from "@nextui-org/react";
+import { createCommands, createMailList, loadCommandDetails, loadCommands, loadCorrespondance, loadEssais, loadMateriaux, loadNotifications, loadSettings, updateNotification } from "../_components/services";
 import { useState, useEffect } from 'react'
 import Constants from "../constants";
 import Link from "next/link";
@@ -12,6 +12,8 @@ export default function Main(){
     const [rootUILoading,setRootUILoading]=useState(false);
 
     const [commands,setCommands]=useState([{id:0,number:"",details:"",etat:0,date_prelevement:""}]);
+
+    const [commandRecap,setCommandRecap]=useState([{materiau:{id:0,label:""},date_prelevement:0,orgine:"",situation:"",essais:[{id:0,label:""}],details:""}]);
 
     const [initiatedCommands,setInitiatedCommands]=useState([{id:0,number:"",details:"",etat:0,date_prelevement:""}]);
     const [receivedCommands,setReceivedCommands]=useState([]);
@@ -33,6 +35,8 @@ export default function Main(){
     const rootUrl=Constants.downoladRootUrl;
 
     const [essais,setEssais]=useState([{id:0,label:"None"}]);
+    const [dynamicEssais,setDynamicEssais]=useState([{id:0,label:""}]);
+    const [dynamicMateriaux,setDynamicMateriaux]=useState({id:0,label:""});
     const [materiaux,setMateriaux]=useState([{id:0,label:"None"}]);
     const {isOpen, onOpen, onOpenChange}=useDisclosure();
 
@@ -42,6 +46,7 @@ export default function Main(){
 
     const [userNotifications,setUserNotifications]=useState([{id:0,message:""}]);
     const [synthesisDocuments,setSynthesisDocuments]=useState([]);
+    const [loadingDynamicEssai,setLoadingDynamicEssai]=useState(false);
 
     const [createCommandLoading,setCreateCommandLoading]=useState(false);
     const [fieldDisabled,setFieldDisabled]=useState(false);
@@ -49,9 +54,13 @@ export default function Main(){
     const [essaisCm,setEssaisCm]=useState([]);
     const [materiauxCm,setMateriauxCm]=useState([]);
     const [detailsCm,setDetailsCm]=useState("");
+    const [originCm,setOriginCm]=useState("");
+    const [situationCm,setSituationCm]=useState("");
 
     const [dateError,setDateError]=useState(false);
     const [essaisError,setEssaisError]=useState(false);
+    const [originCmError,setOriginCmError]=useState(false);
+    const [situationCmError,setSituationCmError]=useState(false);
     const [materiauError,setMateriauError]=useState(false);
     const [detailsError,setDetailsError]=useState(false);
     const [size, setSize] = useState('md');
@@ -224,12 +233,61 @@ export default function Main(){
 
                             </CardHeader>
                             <CardBody>
-                                <div className="m-2 basis-4/12 mr-2 flex justify-center">
-                                    <div className="basis-7/12 bg-blue-900 p-2 rounded-xl shadow">
-                                        <div className="bg-white hover:bg-blue-100 px-2 py-1 rounded-xl w-3/5 flex justify-center">
-                                            <TagIcon height={20} width={20} color="blue"/>
-                                            <p className="font-bold font-md ml-2">Nouvelle commande</p>
+                                <div className="m-2 mr-2 flex justify-around">
+                                    <div className="basis-6/12 bg-blue-900 p-2 rounded-xl shadow">
+                                        <div className="bg-white hover:bg-blue-100 px-2 py-1 rounded-xl w-2/5 flex justify-start items-center">
+                                            <PencilSquareIcon height={20} width={20} color="blue"/>
+                                            <p className="font-bold font-md ml-2">AJOUT DE DETAILS</p>
                                         </div>
+                                        <Select
+                                            selectionMode="single"
+                                            label="Matériaux"
+                                            isDisabled={fieldDisabled}
+                                            onOpenChange={(state)=>{
+                                                if(!state&&(JSON.stringify(dynamicMateriaux)!="{}")){
+                                                    setMateriauError(false);
+                                                }
+                                            }}
+                                            required
+                                            errorMessage={materiauError?"Vous devez choisir au moins un matériau":""}
+                                            isInvalid={materiauError}
+                                            items={materiaux}
+                                            onChange={async (event)=>{
+                                                setDynamicEssais([]);
+                                                setLoadingDynamicEssai(true);
+                                                let value=event.target.value;
+                                                let materiauDynamic:any;
+
+                                                materiaux.forEach((materiau,index)=>{
+                                                    if(materiau.id==parseInt(value)){
+                                                        materiauDynamic=materiau;
+                                                    }
+                                                })
+
+                                                if(value.length!=0){
+                                                    await loadCorrespondance(parseInt(value))
+                                                .then(res=>{
+                                                    setDynamicEssais(res);
+                                                    console.log("Correspondance",res);
+                                                })
+                                                .finally(()=>{
+                                                    setLoadingDynamicEssai(false);
+                                                });
+                                                }
+                                                setDynamicMateriaux(materiauDynamic);
+                                                
+                                            }}
+                                            className="my-1"
+                                        >
+                                            {materiaux.map((data)=>{
+                                                return(
+                                                    <SelectItem
+                                                        key={data.id}
+                                                        title={data.label}
+                                                    />
+                                                )
+                                            })}
+                                        </Select>
                                         <Input 
                                             label="Date de prélèvement"
                                             placeholder="Entrez la date de prélèvement"
@@ -248,49 +306,50 @@ export default function Main(){
                                             className="my-1"
                                             type="datetime-local"
                                         />
-                                        <Select
-                                            selectionMode="multiple"
-                                            label="Matériaux"
+                                        <Input 
+                                            label="Origine"
+                                            placeholder="Lieu géographique où le matériau a été prélevé ..."
+                                            variant="faded"
+                                            errorMessage={originCmError?"L'origine ne  doit ne doit pas être vide":""}
+                                            isInvalid={originCmError}
+                                            required
                                             isDisabled={fieldDisabled}
-                                            onOpenChange={(state)=>{
-                                                if(!state&&(materiauxCm.length!=0)){
-                                                    setMateriauError(false);
+                                            onValueChange={(value)=>{
+                                                setOriginCm(value);
+                                                if(value.length!=0){
+                                                    setOriginCmError(false);
                                                 }
                                             }}
+                                            className="my-1"
+                                            type="text"
+                                        />
+                                        <Input 
+                                            label="Situation"
+                                            placeholder="Couche chaussée, PK, Profil,..."
+                                            variant="faded"
+                                            errorMessage={situationCmError?"La situation doit ne doit pas être vide":""}
+                                            isInvalid={situationCmError}
                                             required
-                                            errorMessage={materiauError?"Vous devez choisir au moins un matériau":""}
-                                            isInvalid={materiauError}
-                                            items={materiaux}
-                                            onChange={(event)=>{
-                                                let value=event.target.value;
-                                                let valueArray=value.split(',');
-                                                let choices:any=[];
-                                                materiaux.forEach((materiau,index)=>{
-                                                    valueArray.forEach(element => {
-                                                        if(materiau.id==parseInt(element)){
-                                                            choices.push(materiau);
-                                                        }
-                                                    });
-                                                })
-                                                setMateriauxCm(choices);
+                                            isDisabled={fieldDisabled}
+                                            onValueChange={(value)=>{
+                                                setSituationCm(value);
+                                                if(value.length!=0){
+                                                    setSituationCmError(false);
+                                                }
                                             }}
                                             className="my-1"
-                                        >
-                                            {materiaux.map((data)=>{
-                                                return(
-                                                    <SelectItem
-                                                        key={data.id}
-                                                        title={data.label}
-                                                    />
-                                                )
-                                            })}
-                                        </Select>
+                                            type="text"
+                                        />
+                                        <div className="flex justify-center">
+                                            <p className="text-white text-xs flex items-center "><ExclamationTriangleIcon height={15} width={15}/><span>Choisissez un matériau et les essais disponibles seront chargés automatiquement</span></p>
+                                        </div>
                                         <Select
                                             selectionMode="multiple"
                                             label="Essais"
+                                            endContent={loadingDynamicEssai?<Spinner size="sm"/>:""}
                                             isDisabled={fieldDisabled}
                                             onOpenChange={(state)=>{
-                                                if(!state&&(essaisCm.length!=0)){
+                                                if(!state&&(dynamicEssais.length!=0)){
                                                     setEssaisError(false);
                                                 }
                                             }}
@@ -318,10 +377,8 @@ export default function Main(){
                                             >
                                                 
                                             </SelectSection>
-                                            <SelectSection
-                                                title="Items"
-                                            >
-                                                {essais.map((data)=>{
+                                            <SelectSection>
+                                                {dynamicEssais.map((data)=>{
                                                     return(
                                                         <SelectItem
                                                             key={data.id}
@@ -345,16 +402,9 @@ export default function Main(){
                                             size="md"
                                             color="primary"
                                             variant="shadow"
-                                            isLoading={createCommandLoading}
-                                            onClick={async ()=>{
+                                            onClick={()=>{
                                                 //states changes
-                                                setCreateCommandLoading(true);
                                                 setFieldDisabled(true);
-
-                                                console.log("Value of date",datePrelevement);
-                                                console.log("Essais",essaisCm);
-                                                console.log("Matériaux",materiauxCm);
-                                                console.log("Détails",detailsCm);
 
                                                 if(datePrelevement===0 || isNaN(datePrelevement)){
                                                     setDateError(true);
@@ -362,25 +412,141 @@ export default function Main(){
                                                 if(essaisCm.length==0){
                                                     setEssaisError(true);
                                                 }
-                                                if(materiauxCm.length==0){
+                                                if(originCm.length==0){
+                                                    setOriginCmError(true);
+                                                }
+                                                if(situationCm.length==0){
+                                                    setSituationCmError(true);
+                                                }
+                                                if(JSON.stringify(dynamicMateriaux)=="{}"){
                                                     setMateriauError(true)
                                                 }
-                                                if(!dateError&&!essaisError&&!materiauError){
-                                                    let dateISOString=new Date(datePrelevement);
-                                                    await createCommands(dateISOString.toISOString(),essaisCm,materiauxCm,detailsCm,"salomon")
-                                                    .then(res=>{
-                                                        console.log(res);
-                                                    })
-                                                    .finally(()=>{
-                                                        setFieldDisabled(false);
-                                                        setCreateCommandLoading(false);
-                                                    });
-                                                    
+                                                if(!dateError&&!essaisError&&!materiauError&&!originCmError&&!situationCmError){
+                                                    if(commandRecap[0].date_prelevement==0){
+                                                        setCommandRecap([]);
+                                                    }
+                                                    setCommandRecap([
+                                                        ...commandRecap,
+                                                        {materiau:dynamicMateriaux,date_prelevement:datePrelevement,orgine:originCm,situation:situationCm,essais:dynamicEssais,details:detailsCm}
+                                                    ]);
+                                                                                                        
+                                                    console.log("Command recap",commandRecap);
                                                 }
+                                                setFieldDisabled(false);
                                             }}
                                         >
-                                            Créer une commande
+                                            <PlusIcon height={20} width={20}/> Ajouter
                                         </Button>
+                                    </div>
+                                    <div className="basis-5/12 flex flex-col justify-between bg-blue-900 p-2 rounded-xl shadow">
+                                        <div className="bg-white hover:bg-blue-100 px-2 py-1 rounded-xl w-2/5 flex justify-start items-center">
+                                            <ShieldCheckIcon height={20} width={20} color="blue"/>
+                                            <p className="font-bold font-md ml-2">FINALISATION</p>
+                                        </div>
+                                        <div>
+                                            <Listbox
+                                                className="max-h-[400px] overflow-auto"
+                                            >
+                                                {commandRecap.map((data,index)=>{
+
+                                                    return(
+                                                        <ListboxItem 
+                                                            key={index}
+                                                            title={data.materiau.label}
+                                                        >
+                                                            <p>{data.date_prelevement}</p>
+                                                        </ListboxItem>
+                                                    )
+                                                })}
+                                            </Listbox>
+                                            
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-end">
+                                                <Button
+                                                    size="md"
+                                                    color="success"
+                                                    variant="shadow"
+                                                    className="m-1 text-white"
+                                                    isLoading={createCommandLoading}
+                                                    onClick={async ()=>{
+                                                        //states changes
+                                                        setCreateCommandLoading(true);
+                                                        setFieldDisabled(true);
+
+                                                        console.log("Value of date",datePrelevement);
+                                                        console.log("Essais",essaisCm);
+                                                        console.log("Matériaux",materiauxCm);
+                                                        console.log("Détails",detailsCm);
+
+                                                        if(datePrelevement===0 || isNaN(datePrelevement)){
+                                                            setDateError(true);
+                                                        }
+                                                        if(essaisCm.length==0){
+                                                            setEssaisError(true);
+                                                        }
+                                                        if(materiauxCm.length==0){
+                                                            setMateriauError(true)
+                                                        }
+                                                        if(!dateError&&!essaisError&&!materiauError){
+                                                            let dateISOString=new Date(datePrelevement);
+                                                            await createCommands(dateISOString.toISOString(),essaisCm,materiauxCm,detailsCm,"salomon")
+                                                            .then(res=>{
+                                                                console.log(res);
+                                                            })
+                                                            .finally(()=>{
+                                                                setFieldDisabled(false);
+                                                                setCreateCommandLoading(false);
+                                                            });
+                                                            
+                                                        }
+                                                    }}
+                                                >
+                                                Enregistrer
+                                                </Button>
+                                                <Button
+                                                    size="md"
+                                                    color="danger"
+                                                    variant="shadow"
+                                                    className="m-1"
+                                                    isLoading={createCommandLoading}
+                                                    onClick={async ()=>{
+                                                        //states changes
+                                                        setCreateCommandLoading(true);
+                                                        setFieldDisabled(true);
+
+                                                        console.log("Value of date",datePrelevement);
+                                                        console.log("Essais",essaisCm);
+                                                        console.log("Matériaux",materiauxCm);
+                                                        console.log("Détails",detailsCm);
+
+                                                        if(datePrelevement===0 || isNaN(datePrelevement)){
+                                                            setDateError(true);
+                                                        }
+                                                        if(essaisCm.length==0){
+                                                            setEssaisError(true);
+                                                        }
+                                                        if(materiauxCm.length==0){
+                                                            setMateriauError(true)
+                                                        }
+                                                        if(!dateError&&!essaisError&&!materiauError){
+                                                            let dateISOString=new Date(datePrelevement);
+                                                            await createCommands(dateISOString.toISOString(),essaisCm,materiauxCm,detailsCm,"salomon")
+                                                            .then(res=>{
+                                                                console.log(res);
+                                                            })
+                                                            .finally(()=>{
+                                                                setFieldDisabled(false);
+                                                                setCreateCommandLoading(false);
+                                                            });
+                                                            
+                                                        }
+                                                    }}
+                                                >
+                                                Soumettre
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </CardBody>

@@ -43,6 +43,10 @@ export async function loadNotifications(username:string){
     const response=await fetch(Constants.notificationUrl+`?username=${username}`);
     return response.json();
 }
+export async function loadCorrespondance(materiau:number){
+    const response=await fetch(Constants.correspondanceUrl+`?materiauId=${materiau}`);
+    return response.json();
+}
 export async function createCommands(datePrelevement:string,essais:any,materiaux:any,details:string,username:string){
     const response=await fetch(Constants.commandsUrl,{
         method:"Post",

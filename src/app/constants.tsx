@@ -8,6 +8,7 @@ const Constants={
     settingsUrl:"http://127.0.0.1:8000/rest/settings/",
     downoladRootUrl:"http://127.0.0.1:8000",
     notificationUrl:"http://127.0.0.1:8000/rest/notifications/",
+    correspondanceUrl:"http://127.0.0.1:8000/rest/correspondances/",
 
 }
 export default Constants;
