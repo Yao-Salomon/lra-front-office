@@ -63,7 +63,19 @@ export async function createCommands(datePrelevement:string,essais:any,materiaux
     })
     return response.json();
 }
-
+export async function savingCommands(formData:any,username:string){
+    const response=await fetch(Constants.commandsUrl,{
+        method:"Post",
+        headers: {
+            "Content-Type": 'application/json; charset=UTF-8',
+          },
+        body:JSON.stringify({
+            "formData":formData,
+            "username":username
+        })
+    })
+    return response.json();
+}
 export async function createMailList(id:number,mail_list:string,username:string){
     const response=await fetch(Constants.settingsUrl,{
         method:"Post",

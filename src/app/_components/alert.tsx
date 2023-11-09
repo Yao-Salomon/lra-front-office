@@ -14,6 +14,8 @@ export default function Alert(props:{message:string,title:string,type:"alert"|"s
         case "danger":
             color="bg-red-500";
             textClassName="text-white"
+            textClassName="text-white";
+            titleClassName+=" text-white"
             break;
         case "atypic":
             color="bg-indigo-500";
@@ -25,7 +27,8 @@ export default function Alert(props:{message:string,title:string,type:"alert"|"s
             break;
         case "warning":
             color="bg-orange-500";
-            textClassName="text-white"
+            textClassName="text-white";
+            titleClassName+=" text-white"
             break;
     }
     const className=color+" fixed top-20 right-0 p-2 flex flex-col rounded-lg border shadow"

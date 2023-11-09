@@ -1,19 +1,18 @@
 "use client";
-import { BellIcon, ChatBubbleLeftIcon, CircleStackIcon, CloudIcon, DocumentIcon, DocumentPlusIcon, EnvelopeIcon, ExclamationTriangleIcon, FireIcon, HashtagIcon, MagnifyingGlassIcon, MegaphoneIcon, MusicalNoteIcon, PencilSquareIcon, PlusCircleIcon, PlusIcon, ReceiptRefundIcon, ShieldCheckIcon, ShoppingCartIcon, SignalIcon, TagIcon, TicketIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
-import {BellAlertIcon, BellSlashIcon, CheckBadgeIcon, CheckCircleIcon, CogIcon, EnvelopeOpenIcon, ServerStackIcon, SwatchIcon} from "@heroicons/react/24/solid"
-import { Button, Tabs,Tab,Card, CardBody, CardHeader, Input, Select, SelectItem, Textarea, SelectSection, Chip, Tooltip, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Badge, Image, Spinner, Listbox, ListboxItem } from "@nextui-org/react";
-import { createCommands, createMailList, loadCommandDetails, loadCommands, loadCorrespondance, loadEssais, loadMateriaux, loadNotifications, loadSettings, updateNotification } from "../_components/services";
+import { BellIcon, ChatBubbleLeftIcon, CircleStackIcon, CloudIcon, DocumentIcon, DocumentPlusIcon, EnvelopeIcon, ExclamationTriangleIcon, FireIcon, GiftIcon, GiftTopIcon, HashtagIcon, InformationCircleIcon, MagnifyingGlassIcon, MegaphoneIcon, MusicalNoteIcon, PencilSquareIcon, PlusCircleIcon, PlusIcon, ReceiptRefundIcon, ShieldCheckIcon, ShoppingCartIcon, SignalIcon, SquaresPlusIcon, TagIcon, TicketIcon, VideoCameraIcon } from "@heroicons/react/24/outline";
+import {BellAlertIcon, BellSlashIcon, CheckBadgeIcon, CheckCircleIcon, CogIcon, EnvelopeOpenIcon, PaperAirplaneIcon, ServerStackIcon, SwatchIcon, TrashIcon} from "@heroicons/react/24/solid"
+import { Button, Tabs,Tab,Card, CardBody, CardHeader, Input, Select, SelectItem, Textarea, SelectSection, Chip, Tooltip, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Badge, Image, Spinner, Listbox, ListboxItem, divider } from "@nextui-org/react";
+import { createCommands, createMailList, loadCommandDetails, loadCommands, loadCorrespondance, loadEssais, loadMateriaux, loadNotifications, loadSettings, savingCommands, updateNotification } from "../_components/services";
 import { useState, useEffect } from 'react'
 import Constants from "../constants";
 import Link from "next/link";
 import Alert from "../_components/alert";
+import Messages from "../_components/messages";
 
 export default function Main(){
-    const [rootUILoading,setRootUILoading]=useState(false);
-
     const [commands,setCommands]=useState([{id:0,number:"",details:"",etat:0,date_prelevement:""}]);
 
-    const [commandRecap,setCommandRecap]=useState([{materiau:{id:0,label:""},date_prelevement:0,orgine:"",situation:"",essais:[{id:0,label:""}],details:""}]);
+    const [commandRecap,setCommandRecap]=useState([{materiau:{id:0,label:"",code:"",situation:""},date_prelevement:"",origine:"",situation:"",essais:[{id:0,label:"",abbreviation:""}],details:""}]);
 
     const [initiatedCommands,setInitiatedCommands]=useState([{id:0,number:"",details:"",etat:0,date_prelevement:""}]);
     const [receivedCommands,setReceivedCommands]=useState([]);
@@ -26,27 +25,32 @@ export default function Main(){
     const [userSettingMailsDuplicate,setUserSettingsDuplicate]=useState(false);
     const [mailSavingAlert,setMailSavingAlert]=useState(false);
 
-    const savingMailMessage="Le liste de diffusion a bien été enregistrée";
-
 
     const [confirmedCommands,setConfirmedCommands]=useState([]);
-    const [commandDetails,setCommandDetails]=useState({essais:[{id:0,label:"",norme:"",fichier:"",abbreviation:"",version:"",details:""}],materiaux:[{id:0,label:"",details:"",code:""}]});
+    const [commandDetails,setCommandDetails]=useState([{materiau:{id:0,label:"",code:"",situation:""},date_prelevement:"",origine:"",situation:"",essais:[{id:0,label:"",abbreviation:""}],details:""}]);
     const [modalLoading,setModalLoading]=useState(false);
     const rootUrl=Constants.downoladRootUrl;
 
     const [essais,setEssais]=useState([{id:0,label:"None"}]);
-    const [dynamicEssais,setDynamicEssais]=useState([{id:0,label:""}]);
-    const [dynamicMateriaux,setDynamicMateriaux]=useState({id:0,label:""});
+    const [dynamicEssais,setDynamicEssais]=useState([{id:0,label:"",abbreviation:""}]);
+    const [dynamicMateriaux,setDynamicMateriaux]=useState({id:0,label:"",code:"",situation:"",origin:""});
     const [materiaux,setMateriaux]=useState([{id:0,label:"None"}]);
     const {isOpen, onOpen, onOpenChange}=useDisclosure();
 
     const [commandLoading,setCommandLoading]=useState(true);
+    const [savingCommandLoading,setSavingCommandLoading]=useState(false);
+    const [rootUILoading,setRootUILoading]=useState(false);
+    const [submitCommandLoading,setSubmitCommandLoading]=useState(false);
     const [mailSettingLoading,setMailSettingLoading]=useState(false);
     const [notificationUpdateLoading,setNotificationLoading]=useState(false);
+    const [loadingDynamicEssai,setLoadingDynamicEssai]=useState(false);
 
     const [userNotifications,setUserNotifications]=useState([{id:0,message:""}]);
+    const [duplicateNofitification,setDuplicateNotification]=useState(false);
+    const [savingSuccessful,setSavingSuccessfull]=useState(false);
+    const [savingError,setSavingError]=useState(false);
+
     const [synthesisDocuments,setSynthesisDocuments]=useState([]);
-    const [loadingDynamicEssai,setLoadingDynamicEssai]=useState(false);
 
     const [createCommandLoading,setCreateCommandLoading]=useState(false);
     const [fieldDisabled,setFieldDisabled]=useState(false);
@@ -56,6 +60,7 @@ export default function Main(){
     const [detailsCm,setDetailsCm]=useState("");
     const [originCm,setOriginCm]=useState("");
     const [situationCm,setSituationCm]=useState("");
+    const [domLoading,setDomLoading]=useState(true);
 
     const [dateError,setDateError]=useState(false);
     const [essaisError,setEssaisError]=useState(false);
@@ -75,6 +80,7 @@ export default function Main(){
             await loadCommands("salomon")
             .then(res=>{
                 setCommands(res);
+                console.log("commands loaded",res);
                 let initiated=res.filter(function(element:any){
                     return element.etat>=1;
                 });
@@ -134,17 +140,24 @@ export default function Main(){
             .finally(()=>{
 
             })
+            setCommandRecap([]);
         }
         doLoad();
       }, []);
 
     return(
-        <div className="flex min-h-screen justify-center">
+        <div className="flex min-h-screen justify-center" onLoad={()=>{
+            setDomLoading(false);
+        }}>
+            {domLoading&&
+                <div className="min-w-screen fixed z-100 inset-0 flex items-center justify-center">
+                    <Spinner size="lg" color="success"/>
+                </div>
+            }
             <div className="rounded m-2 basis-9/12">
                 <Tabs aria-label="Options" color="primary" variant="bordered">
                     <Tab
                         key="dashboard"
-                        
                         title={
                             <div className="flex items-center space-x-2 group">
                                 <ShoppingCartIcon height={20} width={20}/>
@@ -235,9 +248,9 @@ export default function Main(){
                             <CardBody>
                                 <div className="m-2 mr-2 flex justify-around">
                                     <div className="basis-6/12 bg-blue-900 p-2 rounded-xl shadow">
-                                        <div className="bg-white hover:bg-blue-100 px-2 py-1 rounded-xl w-2/5 flex justify-start items-center">
+                                        <div className="bg-white hover:bg-blue-100 px-2 py-1 rounded-xl w-3/5 flex justify-start items-center">
                                             <PencilSquareIcon height={20} width={20} color="blue"/>
-                                            <p className="font-bold font-md ml-2">AJOUT DE DETAILS</p>
+                                            <p className="font-bold font-md ml-2">CREATION DE LA COMMANDE</p>
                                         </div>
                                         <Select
                                             selectionMode="single"
@@ -268,7 +281,6 @@ export default function Main(){
                                                     await loadCorrespondance(parseInt(value))
                                                 .then(res=>{
                                                     setDynamicEssais(res);
-                                                    console.log("Correspondance",res);
                                                 })
                                                 .finally(()=>{
                                                     setLoadingDynamicEssai(false);
@@ -390,7 +402,7 @@ export default function Main(){
                                             
                                         </Select>
                                         <Textarea
-                                            label="Détails"
+                                            label="Informations supplémentaires"
                                             variant="faded"
                                             className="my-1"
                                             isDisabled={fieldDisabled}
@@ -405,59 +417,114 @@ export default function Main(){
                                             onClick={()=>{
                                                 //states changes
                                                 setFieldDisabled(true);
+                                                let is_valid=true;
 
                                                 if(datePrelevement===0 || isNaN(datePrelevement)){
                                                     setDateError(true);
+                                                    is_valid=false;
+                                                    
                                                 }
                                                 if(essaisCm.length==0){
                                                     setEssaisError(true);
+                                                    is_valid=false;
                                                 }
                                                 if(originCm.length==0){
                                                     setOriginCmError(true);
+                                                    is_valid=false;
                                                 }
                                                 if(situationCm.length==0){
                                                     setSituationCmError(true);
+                                                    is_valid=false;
                                                 }
                                                 if(JSON.stringify(dynamicMateriaux)=="{}"){
                                                     setMateriauError(true)
+                                                    is_valid=false;
                                                 }
                                                 if(!dateError&&!essaisError&&!materiauError&&!originCmError&&!situationCmError){
-                                                    if(commandRecap[0].date_prelevement==0){
-                                                        setCommandRecap([]);
-                                                    }
-                                                    setCommandRecap([
-                                                        ...commandRecap,
-                                                        {materiau:dynamicMateriaux,date_prelevement:datePrelevement,orgine:originCm,situation:situationCm,essais:dynamicEssais,details:detailsCm}
-                                                    ]);
-                                                                                                        
-                                                    console.log("Command recap",commandRecap);
+                                                
+                                                    let previousCommanString=JSON.stringify(commandRecap);
+                                                    let currentCommandString=JSON.stringify({materiau:dynamicMateriaux,date_prelevement:datePrelevement,origine:originCm,situation:situationCm,essais:dynamicEssais,details:detailsCm});
+                                                    let dateIsoFormat=new Date(datePrelevement).toISOString()
+
+                                                    if(previousCommanString.includes(currentCommandString)){
+                                                        setDuplicateNotification(true);
+                                                        setTimeout(() => {
+                                                            setDuplicateNotification(false);
+                                                        }, 5000);
+                                                    }else{
+                                                        if(commandRecap.length!=0){
+                                                            setCommandRecap([
+                                                                ...commandRecap,
+                                                                {materiau:dynamicMateriaux,date_prelevement:dateIsoFormat,origine:originCm,situation:situationCm,essais:dynamicEssais,details:detailsCm}
+                                                            ]);
+                                                        }else{
+                                                            if(is_valid){
+                                                                setCommandRecap([{materiau:dynamicMateriaux,date_prelevement:dateIsoFormat,origine:originCm,situation:situationCm,essais:dynamicEssais,details:detailsCm}]);
+                                                            }
+                                                        }
+                                                    }                                                  
                                                 }
                                                 setFieldDisabled(false);
                                             }}
                                         >
                                             <PlusIcon height={20} width={20}/> Ajouter
                                         </Button>
+                                        {duplicateNofitification&&<Alert type="warning" title={Messages.fr.duplicateTitle} message={Messages.fr.duplicateMessage}/>}
                                     </div>
-                                    <div className="basis-5/12 flex flex-col justify-between bg-blue-900 p-2 rounded-xl shadow">
+                                    <div className="basis-5/12 flex flex-col justify-between border p-2 rounded-xl shadow hover:shadow-md">
                                         <div className="bg-white hover:bg-blue-100 px-2 py-1 rounded-xl w-2/5 flex justify-start items-center">
                                             <ShieldCheckIcon height={20} width={20} color="blue"/>
                                             <p className="font-bold font-md ml-2">FINALISATION</p>
                                         </div>
                                         <div>
+                                            
                                             <Listbox
                                                 className="max-h-[400px] overflow-auto"
+                                                variant="shadow"
                                             >
-                                                {commandRecap.map((data,index)=>{
+                                                {
+                                                    commandRecap.map((data,index)=>{
+                                                    const date_prelevement=new Date(data.date_prelevement);
+                                                        return(
+                                                            <ListboxItem 
+                                                                key={index}
+                                                                title={data.materiau.label}
+                                                                description={
+                                                                    <div className="flex flex-col">
+                                                                        <p><span className="mr-1">{date_prelevement.toLocaleDateString()}</span> <span className="mr-1">{data.origine}</span><span className="mr-1">{data.situation}</span></p>
+                                                                        <p className="flex">
+                                                                            {
+                                                                                data.essais.map((data,index)=>{
 
-                                                    return(
-                                                        <ListboxItem 
-                                                            key={index}
-                                                            title={data.materiau.label}
-                                                        >
-                                                            <p>{data.date_prelevement}</p>
-                                                        </ListboxItem>
-                                                    )
-                                                })}
+                                                                                    return(
+                                                                                        <span className="ml-1">{data.abbreviation}</span>
+                                                                                    )
+                                                                                })
+                                                                            }
+                                                                        </p>
+                                                                    </div>
+                                                                }
+                                                                color="success"
+                                                                variant="flat"
+                                                                startContent={<HashtagIcon height={20} width={20}/>}
+                                                                endContent={
+                                                                    <div>
+                                                                        <Button
+                                                                            isIconOnly={true}
+                                                                            color="danger"
+                                                                            variant="flat"
+                                                                            size="sm"
+                                                                        >
+                                                                            <TrashIcon height={20} width={20}/>
+                                                                        </Button>
+                                                                    </div>
+                                                                }
+                                                            >
+                                                                {data.materiau.label}
+                                                            </ListboxItem>
+                                                        )
+                                                    })
+                                                }
                                             </Listbox>
                                             
                                         </div>
@@ -468,83 +535,36 @@ export default function Main(){
                                                     color="success"
                                                     variant="shadow"
                                                     className="m-1 text-white"
-                                                    isLoading={createCommandLoading}
+                                                    isLoading={savingCommandLoading}
+                                                    isDisabled={savingSuccessful||savingError}
                                                     onClick={async ()=>{
                                                         //states changes
-                                                        setCreateCommandLoading(true);
-                                                        setFieldDisabled(true);
-
-                                                        console.log("Value of date",datePrelevement);
-                                                        console.log("Essais",essaisCm);
-                                                        console.log("Matériaux",materiauxCm);
-                                                        console.log("Détails",detailsCm);
-
-                                                        if(datePrelevement===0 || isNaN(datePrelevement)){
-                                                            setDateError(true);
-                                                        }
-                                                        if(essaisCm.length==0){
-                                                            setEssaisError(true);
-                                                        }
-                                                        if(materiauxCm.length==0){
-                                                            setMateriauError(true)
-                                                        }
-                                                        if(!dateError&&!essaisError&&!materiauError){
-                                                            let dateISOString=new Date(datePrelevement);
-                                                            await createCommands(dateISOString.toISOString(),essaisCm,materiauxCm,detailsCm,"salomon")
-                                                            .then(res=>{
-                                                                console.log(res);
+                                                        if(commandRecap.length!=0){
+                                                            setSavingCommandLoading(true);
+                                                            await savingCommands(commandRecap,"salomon")
+                                                            .then((res)=>{
+                                                                setSavingSuccessfull(true);
+                                                                setTimeout(() => {
+                                                                    setSavingSuccessfull(false);
+                                                                }, 5000);
                                                             })
                                                             .finally(()=>{
-                                                                setFieldDisabled(false);
-                                                                setCreateCommandLoading(false);
-                                                            });
-                                                            
-                                                        }
-                                                    }}
-                                                >
-                                                Enregistrer
-                                                </Button>
-                                                <Button
-                                                    size="md"
-                                                    color="danger"
-                                                    variant="shadow"
-                                                    className="m-1"
-                                                    isLoading={createCommandLoading}
-                                                    onClick={async ()=>{
-                                                        //states changes
-                                                        setCreateCommandLoading(true);
-                                                        setFieldDisabled(true);
-
-                                                        console.log("Value of date",datePrelevement);
-                                                        console.log("Essais",essaisCm);
-                                                        console.log("Matériaux",materiauxCm);
-                                                        console.log("Détails",detailsCm);
-
-                                                        if(datePrelevement===0 || isNaN(datePrelevement)){
-                                                            setDateError(true);
-                                                        }
-                                                        if(essaisCm.length==0){
-                                                            setEssaisError(true);
-                                                        }
-                                                        if(materiauxCm.length==0){
-                                                            setMateriauError(true)
-                                                        }
-                                                        if(!dateError&&!essaisError&&!materiauError){
-                                                            let dateISOString=new Date(datePrelevement);
-                                                            await createCommands(dateISOString.toISOString(),essaisCm,materiauxCm,detailsCm,"salomon")
-                                                            .then(res=>{
-                                                                console.log(res);
+                                                                setSavingCommandLoading(false);
                                                             })
-                                                            .finally(()=>{
-                                                                setFieldDisabled(false);
-                                                                setCreateCommandLoading(false);
-                                                            });
-                                                            
+                                                        }else{
+                                                            setSavingError(true);
+                                                            setTimeout(() => {
+                                                                setSavingError(false);
+                                                            }, 5000);
                                                         }
+                                                        //Value validation
+
                                                     }}
                                                 >
-                                                Soumettre
+                                                    Soumettre
                                                 </Button>
+                                            {savingSuccessful&&<Alert title={Messages.fr.savingSuccessfulTitle} message={Messages.fr.savingSuccessful} type="success"/>}
+                                            {savingError&&<Alert title={Messages.fr.savingErrorTitle} message={Messages.fr.savingError} type="danger"/>}
                                             </div>
                                         </div>
                                     </div>
@@ -561,124 +581,126 @@ export default function Main(){
                             </div>
                         }
                     >
-                         {
-                        commandLoading?
-                            <p>Loading</p>
-                            :
-                            <>
-                            <Card>,
-                                <div className="flex flex-wrap p-2">
-                                <Input 
-                                    type="search"
-                                    placeholder="Rechercher par numéro de commande"
-                                    startContent={<MagnifyingGlassIcon height={25} width={25}/>}
+                        <Card>
+                            <div className="flex flex-wrap p-2">
+                            <Input 
+                                type="search"
+                                placeholder="Rechercher par numéro de commande"
+                                startContent={<MagnifyingGlassIcon height={25} width={25}/>}
 
-                                    onValueChange={(value)=>{
+                                onValueChange={(value)=>{
 
-                                        setCommands(initiatedCommands);
-                                        let commandFiltered:any=initiatedCommands.filter(function(element){
-                                            return element.number.toLowerCase().includes(value.toLowerCase())
-                                        })
-                                        setCommands(commandFiltered);
+                                    setCommands(initiatedCommands);
+                                    let commandFiltered:any=initiatedCommands.filter(function(element){
+                                        return element.number.toLowerCase().includes(value.toLowerCase())
+                                    })
+                                    setCommands(commandFiltered);
 
-                                    }}
-                                />
-                                {commands.map((data)=>{
+                                }}
+                            />
+                            <Listbox
+                                className="max-h-[600px] overflow-auto"
+                                variant="shadow"
+                                label="Liste des commandes"
+                            >
+                                {commands.map((data,index)=>{
                                     return(
-                                        <div className=" flex flex-col m-1 border hover:shadow-blue-100 rounded-lg p-2 shadow-sm hover:shadow-md" key={data.id}>
-                                            <p className="flex p-2 shadow rounded-sm"><FireIcon height={25} width={25} color="orange"/>{data.number.toUpperCase()}</p>
-                                            <div className="flex my-1">
-                                                {data.etat>=1&&<CheckCircleIcon height={25} width={25} className="text-green-300"/>}
-                                                {data.etat>=2&&<CheckCircleIcon height={25} width={25} className="text-green-400"/>}
-                                                {data.etat>=3&&<CheckCircleIcon height={25} width={25} className="text-green-500"/>}
-                                                {data.etat>=4&&<CheckCircleIcon height={25} width={25} className="text-green-600"/>}
-                                                {data.etat>=5&&<CheckCircleIcon height={25} width={25} className="text-green-700"/>}
-                                            </div>
-                                            <div>
-                                                <Button
-                                                    variant="faded"
-                                                    color="default"
-                                                    isLoading={modalLoading}
-                                                    className="shadow-sm"
-                                                    onClick={async()=>{
-                                                        setModalLoading(true);
-                                                        await loadCommandDetails("salomon",data.id)
-                                                        .then((res)=>{
-                                                            setCommandDetails(res);
-                                                            handleOpen();
-                                                            console.log(commandDetails);
-                                                        })
-                                                        .finally(()=>{
-                                                            setModalLoading(false);
-                                                        });
-                                                    }}
-                                                >
-                                                    <SwatchIcon height={25} width={25} className="text-gray-400"/>Détails
-                                                </Button>
-                                                <Modal backdrop="blur" size="sm" isOpen={isOpen} onOpenChange={onOpenChange}>
-                                                    <ModalContent>
-                                                        {(onClose)=>(
-                                                            <>
-                                                                <ModalHeader>
-                                                                    <p className="font-bold flex items-center"><SwatchIcon height={25} width={25} color="orange"/><span className="font-bold ml-2">Details de la commande {data.number}</span></p>
-                                                                </ModalHeader>
-                                                                <ModalBody>
-                                                                    <div className="flex flex-col items-start justify-between">
-                                                                        <div>
-                                                                            <p className="font-bold flex items-center"> <CogIcon height={25} width={25}/> Essais</p>
-                                                                            <div className="flex flex-wrap">
-                                                                                {commandDetails.essais.map((essai,index)=>{
-                                                                                    function getNameFromFile(path:string){
-
-                                                                                        let componentArray=path.split("/");
-                                                                                        let fileName=componentArray[componentArray.length-1];
-                                                                                        return fileName;
-                                                                                    }
-                                                                                    return(
-                                                                                        <div key={essai.id} className="rounded-lg border shadow p-2 mr-1">
-                                                                                            <p>Label: {essai.label}</p>
-                                                                                            <p>Norme: {essai.norme}</p>
-                                                                                            <p>Abbréviation: {essai.abbreviation}</p>
-                                                                                            <p>Détails: {essai.details}</p>
-                                                                                            <p className="my-2 flex items-center flex-wrap"><DocumentIcon className="" height={25} width={25}/><Link className="border rounded-lg p-2 bg-blue-600 hover:bg-blue-700 text-white" target="_blank" title="P6" href={`${rootUrl}${essai.fichier}`}>{getNameFromFile(essai.fichier)}</Link></p>
-                                                                                            <p>Version: {essai.version}</p>
-                                                                                        </div>
-                                                                                    )
-                                                                                })}
-                                                                            </div>
-                                                                            <p className="font-bold flex items-center mt-2"><CircleStackIcon height={25} width={25} /> Matériaux</p>
-                                                                            <div className="flex flex-wrap">
-                                                                                {commandDetails.materiaux.map((materiau,index)=>{
-                                                                                    return(
-                                                                                        <div key={materiau.id} className="rounded border shadow p-2 mr-1 my-1">
-                                                                                            <p>Label: {materiau.label}</p>
-                                                                                        </div>
-                                                                                    )
-                                                                                })}
-                                                                            </div>
+                                        <ListboxItem
+                                            key={index}
+                                            variant="faded"
+                                            textValue={data.number}
+                                            endContent={
+                                                <div>
+                                                    <Button
+                                                        variant="shadow"
+                                                        color="primary"
+                                                        isLoading={modalLoading}
+                                                        className="shadow-sm"
+                                                        onClick={async()=>{
+                                                            setModalLoading(true);
+                                                            await loadCommandDetails("salomon",data.id)
+                                                            .then((res)=>{
+                                                                setCommandDetails(res);
+                                                                console.log("commandes details",res);
+                                                                handleOpen();
+                                                            })
+                                                            .finally(()=>{
+                                                                setModalLoading(false);
+                                                            });
+                                                        }}
+                                                        isIconOnly={true}
+                                                    >
+                                                        <SquaresPlusIcon height={20} width={20}/>
+                                                    </Button>
+                                                    <Modal backdrop="blur" size="sm" isOpen={isOpen} onOpenChange={onOpenChange}>
+                                                        <ModalContent>
+                                                            {(onClose)=>(
+                                                                <>
+                                                                    <ModalHeader>
+                                                                        <p className="font-bold flex items-center"><SwatchIcon height={25} width={25} color="orange"/><span className="font-bold ml-2">Details de la commande {data.number}</span></p>
+                                                                    </ModalHeader>
+                                                                    <ModalBody>
+                                                                        <Listbox
+                                                                            className="max-h-[500px] overflow-auto"
+                                                                            variant="shadow"
+                                                                            label="Liste des informations"
+                                                                        >
+                                                                        {commandDetails.map((data)=>{
+                                                                            return(
+                                                                                <ListboxItem
+                                                                                    key={`${data.materiau.label}${data.origine}${data.date_prelevement}`}
+                                                                                >
+                                                                                    <p>{data.materiau.label}</p>
+                                                                                    <div>
+                                                                                        
+                                                                                    </div>
+                                                                                </ListboxItem>
+                                                                            )
+                                                                            })}
+                                                                        </Listbox>
+                                                                        <div className="flex flex-col items-start justify-between">
+                                                                            <Button
+                                                                                onPress={onClose}
+                                                                                variant="ghost"
+                                                                                color="danger"
+                                                                                className="mt-2"
+                                                                            > Fermer</Button>
                                                                         </div>
-                                                                        <Button
-                                                                            onPress={onClose}
-                                                                            variant="ghost"
-                                                                            color="danger"
-                                                                            className="mt-2"
-                                                                        > Fermer</Button>
-                                                                    </div>
-                                                                </ModalBody>
-                                                                <ModalFooter></ModalFooter>
-                                                            </>
-                                                            
-                                                        )}
-                                                    </ModalContent>
-                                                </Modal>
-                                            </div>
-                                        </div>  
+                                                                    </ModalBody>
+                                                                    <ModalFooter></ModalFooter>
+                                                                </>
+                                                                
+                                                            )}
+                                                        </ModalContent>
+                                                    </Modal>
+                                                </div>
+                                            }
+                                            className="group"
+                                            title={<p className="font-bold text-md">{data.number.toUpperCase()}</p>}
+                                            startContent={
+                                                    <div>
+
+                                                    </div>
+                                            }
+                                            description={
+                                                <div className="flex flex-col items-start border-t-2 rounded-xl group-hover:rounded-sm">
+                                                    <div className="flex my-1">
+                                                        {data.etat>=1&&<CheckCircleIcon height={25} width={25} className="text-emerald-100"/>}
+                                                        {data.etat>=2&&<CheckCircleIcon height={25} width={25} className="text-emerald-200"/>}
+                                                        {data.etat>=3&&<CheckCircleIcon height={25} width={25} className="text-emerald-300"/>}
+                                                        {data.etat>=4&&<CheckCircleIcon height={25} width={25} className="text-emerald-400"/>}
+                                                        {data.etat>=5&&<CheckCircleIcon height={25} width={25} className="text-emerald-500"/>}
+                                                    </div>
+                                                </div>
+                                            }
+                                        />
+                                        
                                     )  
                                 })}
-                                </div>
-                            </Card>
-                            </>   
-                        }
+
+                            </Listbox>
+                            </div>
+                        </Card>  
                     </Tab>
                     <Tab
                         key="status"
@@ -804,7 +826,7 @@ export default function Main(){
 
                                             for(let mail in mail_list){
                                                 if(mail_list[mail].match("\\w+@\\w+.\\w{2,5}")){
-                                                    console.log("mail valide",mail_list[mail])
+                                                    //mail validity actions
                                                 }else{
                                                     if(mail_list[mail].length!=0){
                                                         setUserSettingsMailsValid(false);
@@ -850,7 +872,7 @@ export default function Main(){
                                         }
                                     }}
                                 ><p className="text-white font-semibold flex items-center"><CloudIcon height={25} width={25}/>Enregistrer</p></Button>
-                               {mailSavingAlert&&<Alert type="success" title="Status d'enregistrement" message={savingMailMessage}/>}
+                               {mailSavingAlert&&<Alert type="success" title="Status d'enregistrement" message={Messages.fr.savingMailMessage}/>}
                             </CardBody>
                         </Card>
                     </Tab>
